@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation"; 
 import {
   HiOutlineUsers,
   HiOutlineDocumentText,
@@ -59,7 +60,7 @@ const performanceMetrics = [
 
 export default function AgentOverviewPage() {
   const [selectedPeriod, setSelectedPeriod] = useState("week");
-
+  const router = useRouter();
   const getStatusColor = (status: string) => {
     switch(status) {
       case "Approved":

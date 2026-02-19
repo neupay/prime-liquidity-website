@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { HiOutlineUserAdd, HiOutlineSearch } from "react-icons/hi";
+import Link from "next/link";
 
 type Customer = {
   id: number;
@@ -42,13 +43,12 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
         <h2 className="text-3xl font-bold text-gray-900">Customers</h2>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-blue-900 text-white px-5 py-3 rounded-lg hover:bg-blue-800 transition font-medium mt-4 md:mt-0"
-        >
-          <HiOutlineUserAdd />
-          Add Customer
-        </button>
+         <Link
+        href="customers/new"
+        className="px-4 py-2 bg-[#0f172a] text-white rounded-lg hover:bg-[#020617]"
+      >
+        Add New Customer
+      </Link>
       </div>
       <p className="text-gray-800 mb-8">
         Manage registered customers.

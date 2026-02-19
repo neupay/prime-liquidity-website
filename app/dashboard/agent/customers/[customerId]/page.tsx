@@ -5,284 +5,692 @@ import { useState, useEffect } from "react";
 
 type Customer = {
   id: number;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  status: string;
-  joined: string;
-  businessName: string;
+  status: "active" | "inactive" | "pending";
   phone: string;
-  password: string;
-  kyc: File | null;
-  idCardType?: string;
+  password?: string;
+  // KYC Information
+  nationality: string;
+  stateOfOrigin: string;
+  residentialAddress: string;
+  idCardType: "nin" | "passport" | "drivers_license" | "voters_card";
+  idCardNumber: string;
   idCardFile?: File | null;
-  personalAddress?: string;
-  businessAddress?: string;
-  farmSize?: string;
-  nationality?: string;
-  state?: string;
-  businessContact?: string;
-  businessPhotos?: File[];
-  numberOfEmployees?: number;
-  dateStarted?: string;
-  cacFile?: File | null;
+  
+  // KYB Information
+  businessName: string;
+  businessAddress: string;
+  businessEmail: string;
+  businessPhone: string;
+  businessType: "sole_proprietorship" | "partnership" | "limited_liability" | "cooperative";
+  registrationNumber: string;
+  dateEstablished: string;
+  numberOfEmployees: number;
+  farmSize: string; // in hectares
+  farmLocation: string;
+  cropTypes: string[];
+  businessPhotos: File[];
+  cacDocument?: File | null;
+  
+  // Metadata
+  createdAt: string;
+  updatedAt: string;
 };
 
-const mockCustomers: Customer[] = [
-  {
-    id: 1,
-    name: "John Doe",
-    email: "john@example.com",
-    status: "Active",
-    joined: "2024-01-10",
-    businessName: "Doe Inc.",
-    phone: "1234567890",
-    password: "",
-    kyc: null,
-    idCardType: "NIN",
-    idCardFile: null,
-    personalAddress: "123 Main St, Lagos",
-    businessAddress: "456 Business Rd, Lagos",
-    farmSize: "10 hectares",
-    nationality: "Nigerian",
-    state: "Lagos",
-    businessContact: "08012345678",
-    businessPhotos: [],
-    numberOfEmployees: 12,
-    dateStarted: "2018-05-01",
-    cacFile: null,
-  },
-];
+// Initial empty state for new customer
+const initialCustomerState: Omit<Customer, "id" | "createdAt" | "updatedAt"> = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  status: "pending",
+  phone: "",
+  password: "",
+  nationality: "",
+  stateOfOrigin: "",
+  residentialAddress: "",
+  idCardType: "nin",
+  idCardNumber: "",
+  idCardFile: null,
+  businessName: "",
+  businessAddress: "",
+  businessEmail: "",
+  businessPhone: "",
+  businessType: "sole_proprietorship",
+  registrationNumber: "",
+  dateEstablished: "",
+  numberOfEmployees: 0,
+  farmSize: "",
+  farmLocation: "",
+  cropTypes: [],
+  businessPhotos: [],
+  cacDocument: null,
+};
 
-export default function CustomerDetailPage() {
+export default function CustomerFormPage() {
   const params = useParams();
   const router = useRouter();
-  const customerId = Number(params.customerId);
+  const customerId = params?.customerId ? Number(params.customerId) : null;
+  const isEditMode = !!customerId;
 
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [showKycModal, setShowKycModal] = useState(false);
+  const [formData, setFormData] = useState<Omit<Customer, "id" | "createdAt" | "updatedAt">>(initialCustomerState);
+  const [activeTab, setActiveTab] = useState<"personal" | "kyc" | "kyb">("personal");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const found = mockCustomers.find((c) => c.id === customerId);
-    setCustomer(found || null);
-  }, [customerId]);
+    if (isEditMode) {
+      // Fetch customer data for editing
+      // This would be an API call in production
+      const fetchCustomer = async () => {
+        try {
+          // Mock API call
+          // const response = await fetch(`/api/customers/${customerId}`);
+          // const data = await response.json();
+          // setFormData(data);
+        } catch (error) {
+          console.error("Error fetching customer:", error);
+        }
+      };
+      fetchCustomer();
+    }
+  }, [customerId, isEditMode]);
 
-  if (!customer) {
-    return <div className="p-8">Customer not found.</div>;
-  }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === "number" ? Number(value) : value
+    }));
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setFormData(prev => ({
+        ...prev,
+        [fieldName]: fieldName === "businessPhotos" ? Array.from(files) : files[0]
+      }));
+    }
+  };
+
+  const handleCropTypesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const crops = e.target.value.split(",").map(crop => crop.trim());
+    setFormData(prev => ({ ...prev, cropTypes: crops }));
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    // Personal Info validation
+    if (!formData.firstName) newErrors.firstName = "First name is required";
+    if (!formData.lastName) newErrors.lastName = "Last name is required";
+    if (!formData.email) newErrors.email = "Email is required";
+    if (!formData.phone) newErrors.phone = "Phone is required";
+    
+    // KYC validation
+    if (!formData.nationality) newErrors.nationality = "Nationality is required";
+    if (!formData.stateOfOrigin) newErrors.stateOfOrigin = "State of origin is required";
+    if (!formData.residentialAddress) newErrors.residentialAddress = "Residential address is required";
+    if (!formData.idCardNumber) newErrors.idCardNumber = "ID card number is required";
+    
+    // KYB validation
+    if (!formData.businessName) newErrors.businessName = "Business name is required";
+    if (!formData.businessAddress) newErrors.businessAddress = "Business address is required";
+    if (!formData.businessEmail) newErrors.businessEmail = "Business email is required";
+    if (!formData.businessPhone) newErrors.businessPhone = "Business phone is required";
+    if (!formData.farmSize) newErrors.farmSize = "Farm size is required";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      // Switch to first tab with errors
+      if (errors.firstName || errors.lastName || errors.email || errors.phone) {
+        setActiveTab("personal");
+      } else if (errors.nationality || errors.idCardNumber) {
+        setActiveTab("kyc");
+      } else {
+        setActiveTab("kyb");
+      }
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      console.log("Form submitted:", formData);
+      // In production: await fetch('/api/customers', { method: 'POST', body: JSON.stringify(formData) })
+      
+      // Show success message and redirect
+      alert(isEditMode ? "Customer updated successfully!" : "Customer added successfully!");
+      router.push("/customers");
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const TabButton = ({ tab, label }: { tab: typeof activeTab; label: string }) => (
+    <button
+      type="button"
+      onClick={() => setActiveTab(tab)}
+      className={`px-6 py-3 font-medium text-sm rounded-t-lg transition-colors ${
+        activeTab === tab
+          ? "bg-white text-[#0f172a] border-t-2 border-x-2 border-gray-200 -mb-px"
+          : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+      }`}
+    >
+      {label}
+    </button>
+  );
 
   return (
-    <div className="max-w-7xl mx-auto p-10 min-h-[80vh]">
-      {/* Back button */}
-      <button
-        className="mb-8 text-[#0f172a] hover:underline font-semibold"
-        onClick={() => router.back()}
-      >
-        ← Back to Customers
-      </button>
-
-      <h2 className="text-3xl font-extrabold mb-8 text-gray-900">
-        Customer Details
-      </h2>
-
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* PERSONAL INFO */}
-        <div className="flex-1 bg-white rounded-2xl shadow-lg p-10 border min-h-[340px] md:min-h-[420px] lg:min-h-[500px] flex flex-col">
-          <h3 className="text-lg font-semibold mb-6 text-gray-900">Personal Information</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-gray-800 text-base flex-1">
-            <p><strong>Name:</strong> {customer.name}</p>
-            <p><strong>Email:</strong> {customer.email}</p>
-            <p><strong>Phone:</strong> {customer.phone}</p>
-            <p><strong>Joined:</strong> {customer.joined}</p>
-            <p>
-              <strong>Status:</strong>{" "}
-              <span
-                className={`px-2 py-1 rounded text-xs font-semibold ${
-                  customer.status === "Active"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-gray-200 text-gray-600"
-                }`}
-              >
-                {customer.status}
-              </span>
-            </p>
-            <p><strong>Nationality:</strong> {customer.nationality}</p>
-            <p><strong>State:</strong> {customer.state}</p>
-            <p><strong>Address:</strong> {customer.personalAddress}</p>
-          </div>
+    <div className="max-w-7xl mx-auto p-6 lg:p-10">
+      {/* Header */}
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <button
+            onClick={() => router.back()}
+            className="text-[#0f172a] hover:underline font-semibold flex items-center gap-2 mb-4"
+          >
+            ← Back to Customers
+          </button>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isEditMode ? "Edit Customer" : "Add New Customer"}
+          </h1>
+          <p className="text-gray-600 mt-2">
+            {isEditMode 
+              ? "Update customer information and KYC/KYB details"
+              : "Fill in the customer details to create a new account"}
+          </p>
         </div>
-        {/* KYC & KYB INFO */}
-        <div className="w-full md:w-[480px] lg:w-[600px] bg-white rounded-2xl shadow-lg p-10 border min-h-[340px] md:min-h-[420px] lg:min-h-[500px] flex flex-col">
-          <h3 className="text-lg font-semibold mb-6 text-gray-900">KYC & KYB Information</h3>
-          {!customer.kyc ? (
-            <div className="flex-1 flex flex-col justify-center items-center text-gray-600 text-base">
-              <span className="mb-4 font-medium">No KYC/KYB data</span>
-              <button
-                className="px-5 py-3 bg-[#0f172a] text-white rounded-lg font-semibold hover:bg-[#020617] text-base"
-                onClick={() => setShowKycModal(true)}
-              >
-                Add KYC/KYB
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-6 flex-1 flex flex-col justify-between text-gray-800">
-              {/* KYC Section */}
-              <div>
-                <h4 className="font-semibold text-base mb-2 text-gray-900">KYC</h4>
-                <p><strong>ID Type:</strong> {customer.idCardType || "Not provided"}</p>
-                {customer.idCardFile && customer.idCardFile instanceof File && (
-                  <>
-                    {customer.idCardFile.type.startsWith("image/") ? (
-                      <img
-                        src={URL.createObjectURL(customer.idCardFile)}
-                        className="w-full h-40 object-contain rounded border mb-2"
-                      />
-                    ) : (
-                      <a
-                        href={URL.createObjectURL(customer.idCardFile)}
-                        target="_blank"
-                        className="text-blue-700 underline"
-                      >
-                        View ID File
-                      </a>
-                    )}
-                  </>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="customer-form"
+            disabled={isSubmitting}
+            className="px-8 py-2.5 bg-[#0f172a] text-white rounded-lg hover:bg-[#020617] font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <span className="animate-spin">⏳</span>
+                {isEditMode ? "Updating..." : "Saving..."}
+              </>
+            ) : (
+              <>{isEditMode ? "Update Customer" : "Save Customer"}</>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Form */}
+      <form id="customer-form" onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg border">
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 px-6">
+          <TabButton tab="personal" label="Personal Information" />
+          <TabButton tab="kyc" label="KYC Verification" />
+          <TabButton tab="kyb" label="Business Information (KYB)" />
+        </div>
+
+        {/* Tab Content */}
+        <div className="p-8">
+          {/* Personal Information Tab */}
+          {activeTab === "personal" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    First Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleInputChange}
+                    className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a] focus:border-transparent ${
+                      errors.firstName ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Enter first name"
+                  />
+                  {errors.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Last Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                    className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a] ${
+                      errors.lastName ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Enter last name"
+                  />
+                  {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a] ${
+                      errors.email ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="customer@example.com"
+                  />
+                  {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a] ${
+                      errors.phone ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="+234 XXX XXX XXXX"
+                  />
+                  {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+                </div>
+
+                {!isEditMode && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Temporary Password
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a]"
+                      placeholder="Leave blank to auto-generate"
+                    />
+                  </div>
                 )}
-                <p><strong>Customer Address:</strong> {customer.personalAddress}</p>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Account Status
+                  </label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a]"
+                  >
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
               </div>
-              <hr className="my-2 border-gray-200" />
-              {/* KYB Section */}
-              <div>
-                <h4 className="font-semibold text-base mb-2 text-gray-900">KYB</h4>
-                <p><strong>Business Name:</strong> {customer.businessName}</p>
-                <p><strong>Business Address:</strong> {customer.businessAddress}</p>
-                <p><strong>Business Size:</strong> {customer.numberOfEmployees}</p>
-                <p><strong>Farm Size:</strong> {customer.farmSize}</p>
-                <p><strong>Business Contact:</strong> {customer.businessContact}</p>
-                <p><strong>Date Started:</strong> {customer.dateStarted}</p>
-                {/* CAC Document */}
-                {customer.cacFile && customer.cacFile instanceof File && (
-                  <div className="mb-2">
-                    <a
-                      href={URL.createObjectURL(customer.cacFile)}
-                      target="_blank"
-                      className="text-blue-700 underline"
-                    >
-                      View CAC Document
-                    </a>
-                  </div>
-                )}
-                {/* Business Photos */}
-                {customer.businessPhotos && customer.businessPhotos.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {customer.businessPhotos.map((photo, idx) =>
-                      photo && photo instanceof File ? (
-                        <img
-                          key={idx}
-                          src={URL.createObjectURL(photo)}
-                          className="h-24 w-full object-cover rounded border"
-                        />
-                      ) : null
-                    )}
-                  </div>
-                )}
+            </div>
+          )}
+
+          {/* KYC Tab */}
+          {activeTab === "kyc" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nationality <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="nationality"
+                    value={formData.nationality}
+                    onChange={handleInputChange}
+                    className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a] ${
+                      errors.nationality ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="e.g., Nigerian"
+                  />
+                  {errors.nationality && <p className="text-red-500 text-sm mt-1">{errors.nationality}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    State of Origin <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="stateOfOrigin"
+                    value={formData.stateOfOrigin}
+                    onChange={handleInputChange}
+                    className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a] ${
+                      errors.stateOfOrigin ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="e.g., Lagos"
+                  />
+                  {errors.stateOfOrigin && <p className="text-red-500 text-sm mt-1">{errors.stateOfOrigin}</p>}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Residential Address <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="residentialAddress"
+                    value={formData.residentialAddress}
+                    onChange={handleInputChange}
+                    rows={2}
+                    className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a] ${
+                      errors.residentialAddress ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Full residential address"
+                  />
+                  {errors.residentialAddress && <p className="text-red-500 text-sm mt-1">{errors.residentialAddress}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ID Card Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="idCardType"
+                    value={formData.idCardType}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a]"
+                  >
+                    <option value="nin">National Identification Number (NIN)</option>
+                    <option value="passport">International Passport</option>
+                    <option value="drivers_license">Driver's License</option>
+                    <option value="voters_card">Voter's Card</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ID Card Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="idCardNumber"
+                    value={formData.idCardNumber}
+                    onChange={handleInputChange}
+                    className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a] ${
+                      errors.idCardNumber ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Enter ID number"
+                  />
+                  {errors.idCardNumber && <p className="text-red-500 text-sm mt-1">{errors.idCardNumber}</p>}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Upload ID Card (Front & Back)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => handleFileChange(e, "idCardFile")}
+                    className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-[#0f172a]"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Accepted formats: JPG, PNG, PDF (Max 5MB)</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* KYB Tab */}
+          {activeTab === "kyb" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Business Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="businessName"
+                    value={formData.businessName}
+                    onChange={handleInputChange}
+                    className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a] ${
+                      errors.businessName ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Registered business name"
+                  />
+                  {errors.businessName && <p className="text-red-500 text-sm mt-1">{errors.businessName}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Business Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    name="businessEmail"
+                    value={formData.businessEmail}
+                    onChange={handleInputChange}
+                    className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a] ${
+                      errors.businessEmail ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="business@company.com"
+                  />
+                  {errors.businessEmail && <p className="text-red-500 text-sm mt-1">{errors.businessEmail}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Business Phone <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="businessPhone"
+                    value={formData.businessPhone}
+                    onChange={handleInputChange}
+                    className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a] ${
+                      errors.businessPhone ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Business contact number"
+                  />
+                  {errors.businessPhone && <p className="text-red-500 text-sm mt-1">{errors.businessPhone}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Business Type
+                  </label>
+                  <select
+                    name="businessType"
+                    value={formData.businessType}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a]"
+                  >
+                    <option value="sole_proprietorship">Sole Proprietorship</option>
+                    <option value="partnership">Partnership</option>
+                    <option value="limited_liability">Limited Liability Company</option>
+                    <option value="cooperative">Cooperative Society</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Registration Number
+                  </label>
+                  <input
+                    type="text"
+                    name="registrationNumber"
+                    value={formData.registrationNumber}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a]"
+                    placeholder="CAC registration number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date Established
+                  </label>
+                  <input
+                    type="date"
+                    name="dateEstablished"
+                    value={formData.dateEstablished}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Number of Employees
+                  </label>
+                  <input
+                    type="number"
+                    name="numberOfEmployees"
+                    value={formData.numberOfEmployees}
+                    onChange={handleInputChange}
+                    min="0"
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a]"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Business Address <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="businessAddress"
+                    value={formData.businessAddress}
+                    onChange={handleInputChange}
+                    rows={2}
+                    className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a] ${
+                      errors.businessAddress ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Full business address"
+                  />
+                  {errors.businessAddress && <p className="text-red-500 text-sm mt-1">{errors.businessAddress}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Farm Size (hectares) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="farmSize"
+                    value={formData.farmSize}
+                    onChange={handleInputChange}
+                    className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a] ${
+                      errors.farmSize ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="e.g., 50 hectares"
+                  />
+                  {errors.farmSize && <p className="text-red-500 text-sm mt-1">{errors.farmSize}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Farm Location
+                  </label>
+                  <input
+                    type="text"
+                    name="farmLocation"
+                    value={formData.farmLocation}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a]"
+                    placeholder="City, State"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Crop Types (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.cropTypes.join(", ")}
+                    onChange={handleCropTypesChange}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#0f172a]"
+                    placeholder="e.g., Maize, Cassava, Rice"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    CAC Document (Optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => handleFileChange(e, "cacDocument")}
+                    className="w-full border border-gray-300 rounded-lg p-2"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Business Photos (2-3 images)
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => handleFileChange(e, "businessPhotos")}
+                    className="w-full border border-gray-300 rounded-lg p-2"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Upload photos of your farm, products, or business premises
+                  </p>
+                </div>
               </div>
             </div>
           )}
         </div>
-      </div>
-      {/* MODAL */}
-      {showKycModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-2xl relative">
-            <button
-              onClick={() => setShowKycModal(false)}
-              className="absolute right-6 top-4 text-2xl text-[#0f172a] hover:text-[#020617]"
-            >
-              ×
-            </button>
-            <h3 className="text-2xl font-bold mb-6">KYC & KYB Form</h3>
-            <form className="space-y-8 max-h-[70vh] overflow-y-auto">
-              {/* KYC Section */}
-              <fieldset className="border rounded-xl p-6 shadow-sm mb-6">
-                <legend className="px-2 text-lg font-bold text-[#0f172a]">KYC (Customer)</legend>
-                <div className="grid md:grid-cols-2 gap-6 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">ID Card Type</label>
-                    <select className="w-full border p-2 rounded-lg">
-                      <option>Select ID Type</option>
-                      <option>NIN</option>
-                      <option>International Passport</option>
-                      <option>Driver's License</option>
-                      <option>Voter's Card</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">ID Card File</label>
-                    <input type="file" className="w-full border p-2 rounded-lg" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium mb-1">Customer Address</label>
-                    <input type="text" className="w-full border p-2 rounded-lg" />
-                  </div>
-                </div>
-              </fieldset>
-              {/* KYB Section */}
-              <fieldset className="border rounded-xl p-6 shadow-sm mb-6">
-                <legend className="px-2 text-lg font-bold text-[#0f172a]">KYB (Business)</legend>
-                <div className="grid md:grid-cols-2 gap-6 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Business Name</label>
-                    <input type="text" className="w-full border p-2 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Business Address</label>
-                    <input type="text" className="w-full border p-2 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Business Size (Employees)</label>
-                    <input type="number" className="w-full border p-2 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Farm Size</label>
-                    <input type="text" className="w-full border p-2 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Business Contact</label>
-                    <input type="text" className="w-full border p-2 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Date Started</label>
-                    <input type="date" className="w-full border p-2 rounded-lg" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium mb-1">CAC Document (Optional)</label>
-                    <input type="file" className="w-full border p-2 rounded-lg" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium mb-1">Business Pictures <span className='text-xs text-gray-500'>(2-3 images)</span></label>
-                    <input type="file" multiple accept="image/*" className="w-full border p-2 rounded-lg" />
-                  </div>
-                </div>
-              </fieldset>
-              <div className="flex justify-end gap-4 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowKycModal(false)}
-                  className="px-6 py-2 rounded-lg border bg-[#0f172a] text-white hover:bg-[#020617]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-8 py-2 rounded-lg bg-[#0f172a] text-white hover:bg-[#020617]"
-                >
-                  Submit
-                </button>
-              </div>
-            </form>
-          </div>
+
+        {/* Form Footer */}
+        <div className="border-t border-gray-200 px-8 py-6 flex justify-end gap-4">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="px-8 py-2.5 bg-[#0f172a] text-white rounded-lg hover:bg-[#020617] font-medium disabled:opacity-50"
+          >
+            {isSubmitting ? "Saving..." : isEditMode ? "Update Customer" : "Save Customer"}
+          </button>
         </div>
-      )}
+      </form>
     </div>
   );
 }
