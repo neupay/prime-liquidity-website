@@ -1,0 +1,29 @@
+# .dockerignore
+node_modules
+.next
+.git
+.env
+.env.local
+.env.production
+.DS_Store
+*.log
+npm-debug.log*
+README.md
+.dockerignore
+Dockerfile
+docker-compose.yml
+.gitignore
+.github
+.vscode
+.idea
+coverage
+.vercel
+*.md
+**/__tests__/
+**/__mocks__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+cypress/
+public/images/ # If you have large images, consider handling separately

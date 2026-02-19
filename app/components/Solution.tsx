@@ -39,11 +39,11 @@ export default function Solution() {
           </p>
 
           {/* CTA buttons */}
-          <div className="flex flex-wrap gap-4">
+          <div className="flex gap-3 mt-8">
             {/* Primary */}
             <a
               href="#get-started"
-              className="inline-flex items-center gap-2 px-7 py-4 rounded-full bg-blue-600 text-white font-medium shadow-md hover:bg-blue-700 transition"
+              className="inline-flex items-center gap-2 px-5 md:px-7 py-3 md:py-4 rounded-full bg-blue-600 text-white font-medium shadow-md hover:bg-blue-700 transition whitespace-nowrap shrink-0"
             >
               <svg
                 className="w-5 h-5"
@@ -60,7 +60,8 @@ export default function Solution() {
             {/* Secondary */}
             <a
               href="#how-it-works"
-              className="inline-flex items-center gap-2 px-7 py-4 rounded-full border-2 border-blue-600 text-blue-600 font-medium hover:bg-blue-50 transition"
+              className="inline-flex items-center gap-2 px-5 md:px-7 py-3 md:py-4 rounded-full border-2 border-blue-600 text-blue-600 font-medium hover:bg-blue-50 transition whitespace-nowrap shrink-0"
+
             >
               <svg
                 className="w-5 h-5"
